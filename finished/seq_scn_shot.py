@@ -277,13 +277,13 @@ class Ui_Form(object):
 
     def get_versions(self, shot):
         self.version_comboBox_obj.clear()
-        self.versions = ['<Latest>', '<All>']
+        self.versions = ['<All>']
 
         seq = str(self.sequence_comboBox_obj.currentText()).encode('ascii')
         scn = str(self.scene_comboBox_obj.currentText()).encode('ascii')
         shot = str(self.shot_comboBox_obj.currentText()).encode('ascii')
 
-        if shot not in self.versions:
+        if shot != '<All>':
             path = self.__class__.base_path + self.__class__.rel_exr_path
             #path = path.format("seq14", "scn28", "sh029")
             path = path.format(seq, scn, shot)

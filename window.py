@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import sys
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
@@ -7,6 +9,7 @@ import glob, base64, re, pexpect, redis, os
 from seq_scn_shot import Ui_Form
 
 exr_path = "/nas/projects/Tactic/bilal/render/XXX/YYY/ZZZ/comp/render/exr/VVV/XXX_YYY_ZZZ_cmp_compositing_VVV.%04d.exr"
+mov_path = "/nas/projects/Tactic/bilal/render/{0}/{1}/{2}/comp/render/mov/{3}/"
 
 class SeqScnShot(QWidget):
     def __init__(self, parent=None, *args, **kwargs):
@@ -109,6 +112,14 @@ class Widget(QWidget):
                         for path in paths:
                             #print path
                             ver_paths.append(path)
+                elif ver == '<Latest>':
+                    for shot in shots:
+                        path = item.ui.__class__.base_path + item.ui.__class__.rel_exr_path
+                        path = path.format(seq, scn, shot)
+                        #print path
+
+                        paths = sorted(glob.glob(path))
+                        ver_paths.append(paths[-1])
                 else:
                     path = item.ui.__class__.base_path + item.ui.__class__.rel_exr_abs_path
                     path = path.format(seq, scn, shot, ver)
@@ -127,6 +138,7 @@ class Widget(QWidget):
     def djv(self):
         print self.paths
 
+        """
         for item, ver_paths in self.paths:
             item.ui.status_message_obj.clear()
             print item.ui.uuid4
@@ -179,6 +191,7 @@ class Widget(QWidget):
         return
 
         """
+
         for item, ver_paths in self.paths:
             item.ui.status_message_obj.clear()
 
@@ -190,7 +203,7 @@ class Widget(QWidget):
                 exr_wc = path + "/*"
                 images = sorted(glob.glob(exr_wc))
                 if images:
-                    print images[0]
+                    #print images[0]
                     try:
                         (prefix, first, suffix) =  re.search("(.*\.)([0-9]+)(\.exr)", images[0]).groups()
                         last =  re.search("(.*\.)([0-9]+)(\.exr)", images[-1]).groups()[1]
@@ -198,51 +211,49 @@ class Widget(QWidget):
 
                         #output_path = "/tmp/foo{0}.mov".format(count+1)
 
-                        (base_path, render_ver) = re.search("(.*render)/exr/(v\d{1,})", path).groups()
-                        output_path = "{0}/mov/{1}/".format(base_path, render_ver)
+                        (_seq, _scn, _shot, _ver) = re.search(".*?(seq\d{1,}[a-zA-Z]{0,})/(scn\d{1,}[a-zA-Z]{0,})/(sh\d{1,}[a-zA-Z]{0,}).*?(v\d{1,})", path).groups()
+                        output_path = mov_path.format(_seq, _scn, _shot, _ver)
+                        print output_path
+                        #(base_path, render_ver) = re.search("(.*render)/exr/(v\d{1,})", path).groups()
+                        #output_path = "{0}/mov/{1}/".format(base_path, render_ver)
                         if not os.path.exists(output_path):
                             os.makedirs(output_path)
 
-                        seq = str(item.ui.sequence_comboBox_obj.currentText()).encode('ascii')
-                        scn = str(item.ui.scene_comboBox_obj.currentText()).encode('ascii')
-                        shot = str(item.ui.shot_comboBox_obj.currentText()).encode('ascii')
-                        output_file = "{0}_{1}_{2}_{3}.mov".format(seq, scn, shot, render_ver)
+                        output_file = "{0}_{1}_{2}_{3}.mov".format(_seq, _scn, _shot, _ver)
                         output_path += output_file
+
+                        djv_cmd = self.__class__.djv_cmd.format(input_path, output_path)
+
+                        print djv_cmd
+
+                        thread = pexpect.spawn(djv_cmd)
+                        cpl = thread.compile_pattern_list([pexpect.EOF, '(.*)'])
+
+                        while True:
+                            i = thread.expect_list(cpl, timeout=None)
+                            if i == 0:
+                                break
+                            elif i == 1:
+                                progress_output = thread.match.group(1).strip()
+                                print progress_output
+                                item.ui.status_message_obj.appendPlainText(progress_output)
+                                try:
+                                    progress_stat_reg_ex = re.search("^\[\s?(\d+)%\]", progress_output)
+                                    if progress_stat_reg_ex:
+                                        progress_stat = count * step + float(progress_stat_reg_ex.groups()[0]) / size
+                                        print progress_stat
+                                        item.ui.progress_bar_obj.setValue(int(progress_stat))
+                                except Exception as e:
+                                    #print e.message
+                                    item.ui.status_message_obj.appendPlainText("Error: {0}".format(e.message))
+                        count += 1
+
+                        #item.ui.progress_bar_obj.setValue(100)
+                        thread.close()
                     except Exception as e:
                         print e.message
                         item.ui.status_message_obj.appendPlainText("Error: {0}".format(e.message))
 
-                    djv_cmd = self.__class__.djv_cmd.format(input_path, output_path)
-
-                    print djv_cmd
-
-                    continue
-
-                    thread = pexpect.spawn(djv_cmd)
-                    cpl = thread.compile_pattern_list([pexpect.EOF, '(.*)'])
-
-                    while True:
-                        i = thread.expect_list(cpl, timeout=None)
-                        if i == 0:
-                            break
-                        elif i == 1:
-                            progress_output = thread.match.group(1).strip()
-                            print progress_output
-                            item.ui.status_message_obj.appendPlainText(progress_output)
-                            try:
-                                progress_stat_reg_ex = re.search("^\[\s?(\d+)%\]", progress_output)
-                                if progress_stat_reg_ex:
-                                    progress_stat = count * step + float(progress_stat_reg_ex.groups()[0]) / size
-                                    print progress_stat
-                                    item.ui.progress_bar_obj.setValue(int(progress_stat))
-                            except Exception as e:
-                                #print e.message
-                                item.ui.status_message_obj.appendPlainText("Error: {0}".format(e.message))
-                    count += 1
-
-                    #item.ui.progress_bar_obj.setValue(100)
-                    thread.close()
-        """
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

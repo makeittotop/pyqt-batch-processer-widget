@@ -9,7 +9,7 @@ import glob, base64, re, pexpect, redis, os
 from seq_scn_shot import Ui_Form
 
 exr_path = "/nas/projects/Tactic/bilal/render/XXX/YYY/ZZZ/comp/render/exr/VVV/XXX_YYY_ZZZ_cmp_compositing_VVV.%04d.exr"
-mov_path = "/nas/projects/Tactic/bilal/render/{0}/{1}/{2}/comp/render/mov/"
+mov_path = "/nas/projects/Tactic/bilal/render/{0}/{1}/{2}/comp/render/mov/{3}/"
 
 class SeqScnShot(QWidget):
     def __init__(self, parent=None, *args, **kwargs):
@@ -112,6 +112,14 @@ class Widget(QWidget):
                         for path in paths:
                             #print path
                             ver_paths.append(path)
+                elif ver == '<Latest>':
+                    for shot in shots:
+                        path = item.ui.__class__.base_path + item.ui.__class__.rel_exr_path
+                        path = path.format(seq, scn, shot)
+                        #print path
+
+                        paths = sorted(glob.glob(path))
+                        ver_paths.append(paths[-1])
                 else:
                     path = item.ui.__class__.base_path + item.ui.__class__.rel_exr_abs_path
                     path = path.format(seq, scn, shot, ver)
@@ -201,7 +209,7 @@ class Widget(QWidget):
 
                         #output_path = "/tmp/foo{0}.mov".format(count+1)
 
-                        (_seq, _scn, _shot, _ver) = re.search(".*?(seq\d{1,})/(scn\d{1,})/(sh\d{1,}).*?(v\d{1,})", path).groups()
+                        (_seq, _scn, _shot, _ver) = re.search(".*?(seq\d{1,}[a-zA-Z]{0,})/(scn\d{1,}[a-zA-Z]{0,})/(sh\d{1,}[a-zA-Z]{0,}).*?(v\d{1,})", path).groups()
                         output_path = mov_path.format(_seq, _scn, _shot, _ver)
                         print output_path
                         #(base_path, render_ver) = re.search("(.*render)/exr/(v\d{1,})", path).groups()
