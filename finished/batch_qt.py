@@ -190,6 +190,8 @@ class Widget(QWidget):
         return
         """
 
+        # set the app cursor to wait
+        QApplication.setOverrideCursor(Qt.WaitCursor)
         for item, ver_paths in self.paths:
             item.ui.status_message_obj.clear()
 
@@ -251,6 +253,8 @@ class Widget(QWidget):
                     except Exception as e:
                         print e.message
                         item.ui.status_message_obj.appendPlainText("Error: {0}".format(e.message))
+        # reset item cursor
+        QApplication.restoreOverrideCursor()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
